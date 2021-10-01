@@ -5,11 +5,20 @@ const path = require('path');
 const bodyParser = require('body-parser');
 const MongoClient = require('mongodb').MongoClient;
 const { response } = require('express');
+const cors = require('cors');
 
 // using express
 const app = express();
 app.use(bodyParser.urlencoded({extended: true}));
 app.use(bodyParser.json());
+
+const corsOptions = {
+    origin : 'http://localhost:3000',
+    credentials : true,
+}
+app.use(cors(corsOptions));
+
+app.use(morgan('dev'));
 
 //
 const http = require('http').createServer(app);
@@ -32,31 +41,49 @@ MongoClient.connect(mydbURL, /*{unifiedTopology:true},*/ (error, client)=>{
 app.use(express.static(path.join(__dirname, '../client/build')));
 
 // 
-app.get('*', (req, res)=>{
-    res.sendFile(path.join(__dirname, '../client/build/index.html'));
-})
-app.get('/wow', (req, res)=>{
-    console.log("lalala");
+
+app.get('/list', (req, res)=>{
+    // console.log(req);
     db.collection('post').find().toArray((error, result)=>{
-        console.log(result);
-        response.send(result);
+        // console.log(result);
+        res.send(result);
     })
-    console.log(data);
+    // console.log(data);
 
     console.log("wwww");
-    res.send("Found")
+    // res.send("Found")
 })
-app.post('/wow', (req, res)=>{
-    //console.log(res.body);
-    //es.send(req.data)
-    console.log("hahaha");
-    console.log(req.body);
-    db.collection("post").insertOne({
+
+// /Write -> Post
+app.post('/list', (req, res)=>{
+    // Total Posts
+    let numberofPosts;
+    db.collection('counter').findOne({name:"totalPosts"}, (error, result)=>{
+        numberofPosts = result.totalPosts;
+        console.log(numberofPosts);
+    })
+    db.collection('post').insertOne({
+        _id: numberofPosts,
         todo: req.body.todo,
         due: req.body.due
     }, (err, res)=>{
-        console.log("Saved");
+        console.log(numberofPosts);
+        db.collection('counter').updateOne({name:"totalPosts"}, {$inc:{totalPosts:1}}, (error, result)=>{
+            if(error){return console.log(error)}
+        })
     })
     res.send("Posted")
     // console.log(res.config.data);
+})
+
+app.get('/tmp', (req, res)=>{
+    console.log("Good");
+    // res.header("Access-Control-Allow-Origin", "*");
+    
+    res.send("Good");
+   
+})
+
+app.get('*', (req, res)=>{
+    res.sendFile(path.join(__dirname, '../client/build/index.html'));
 })
